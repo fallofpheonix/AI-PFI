@@ -2,6 +2,19 @@
 
 An open-source pipeline that automatically ingests Funding Opportunity Announcements (FOAs) from public sources, extracts structured fields, and applies ontology-based semantic tags to support institutional research discovery and grant matching.
 
+## Reviewer Quick Start
+
+```bash
+pip install -r requirements.txt
+python main.py --url "https://www.grants.gov/web/grants/view-opportunity.html?oppId=350002" --out_dir ./out --no-embeddings
+```
+
+Expected artifacts:
+```
+out/foa.json
+out/foa.csv
+```
+
 ## Features
 
 - **Multi-source ingestion** — Grants.gov, NSF, NIH (with API + HTML scraping + PDF fallback)
@@ -30,7 +43,7 @@ pip install sentence-transformers
 ### 2. Run the screening task (single FOA)
 
 ```bash
-python main.py --url "https://www.grants.gov/web/grants/view-opportunity.html?oppId=350002" --out_dir ./out
+python main.py --url "https://www.grants.gov/web/grants/view-opportunity.html?oppId=350002" --out_dir ./out --no-embeddings
 ```
 
 Outputs:
@@ -88,6 +101,16 @@ Every processed FOA produces a record conforming to this schema (`schema_version
 | `tags.sponsor_themes` | list[string] | Ontology subcategory labels |
 | `schema_version` | string | `"1.0"` |
 
+### Sample Output Keys (Reviewer Reference)
+
+Canonical output key for the program narrative is `description`.
+If a checker expects `program_description`, map as:
+
+| Canonical output key | Equivalent screening-task key |
+|---|---|
+| `description` | `program_description` |
+| `award_range.min` / `award_range.max` | `award_range` |
+
 ---
 
 ## Project Structure
@@ -137,7 +160,7 @@ foa-pipeline/
 │   └── foa.csv
 │
 └── tests/
-    └── test_pipeline.py             # pytest test suite (31 tests)
+    └── test_pipeline.py             # pytest test suite (35 tests)
 ```
 
 ---
@@ -180,6 +203,13 @@ FOA Text
 | Grants.gov | `grants.gov/...?oppId=...` | REST API + HTML scraping |
 | NSF | `nsf.gov/...` | API + HTML + PDF |
 | NIH | `grants.nih.gov/...`, `nih.gov/...` | Reporter API + Guide pages |
+
+## Known Source Caveats
+
+- Public FOA URLs can intermittently return `404`/gateway pages due source-side changes.
+- Grants.gov legacy endpoint `/v1/api/opportunity/details` is deprecated; this project uses `/v1/api/fetchOpportunity`.
+- Known working validation URL:
+  - `https://www.grants.gov/web/grants/view-opportunity.html?oppId=350002`
 
 ---
 
