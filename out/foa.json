@@ -1,0 +1,36 @@
+{
+  "foa_id": "DE-FOA-0003100",
+  "title": "Data-Intensive Scientific Machine Learning and AI for Science, Engineering, and Medicine",
+  "agency": "Department of Energy",
+  "open_date": "2024-01-10",
+  "close_date": "2024-04-30",
+  "eligibility": "Eligible applicants include domestic universities and colleges, national laboratories, non-profit organizations, and for-profit entities. Applications from minority-serving institutions and historically Black colleges and universities are strongly encouraged.",
+  "description": "This FOA supports research in data-intensive scientific machine learning and artificial intelligence for science, engineering, and medicine. Projects should focus on the development of novel deep learning and neural network methods applied to large-scale scientific datasets. Topics include: computational physics simulations, climate modeling, materials science, genomics, drug discovery, and health informatics. Collaborative, multi-institutional teams are encouraged. Award duration: 3 years.",
+  "award_range": {
+    "min": 500000,
+    "max": 3000000
+  },
+  "source_url": "https://www.grants.gov/web/grants/view-opportunity.html?oppId=350002",
+  "source_name": "grants.gov",
+  "ingested_at": "2026-03-10T16:17:06Z",
+  "tags": {
+    "research_domains": [
+      "biomedical",
+      "computer_science",
+      "engineering",
+      "physical_sciences"
+    ],
+    "methods_approaches": [
+      "computational",
+      "ai_ml"
+    ],
+    "populations": [
+      "minority"
+    ],
+    "sponsor_themes": [
+      "collaboration",
+      "basic_research"
+    ]
+  },
+  "schema_version": "1.0"
+}

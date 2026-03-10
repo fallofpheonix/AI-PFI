@@ -1,0 +1,46 @@
+{
+  "research_domains": {
+    "biomedical": ["biomedical", "biology", "biochemistry", "genomics", "proteomics", "cell biology", "molecular biology", "neuroscience", "neurology", "oncology", "cancer", "immunology", "pharmacology", "drug discovery", "clinical research", "epidemiology", "public health", "microbiology", "virology", "infectious disease", "pathology", "physiology", "anatomy"],
+    "computer_science": ["computer science", "artificial intelligence", "machine learning", "deep learning", "natural language processing", "nlp", "computer vision", "robotics", "cybersecurity", "data science", "software engineering", "algorithms", "distributed systems", "cloud computing", "human-computer interaction", "hci", "database", "information retrieval"],
+    "engineering": ["engineering", "electrical engineering", "mechanical engineering", "civil engineering", "chemical engineering", "aerospace engineering", "bioengineering", "materials science", "nanotechnology", "semiconductor", "photonics", "structural engineering", "environmental engineering"],
+    "social_sciences": ["social science", "sociology", "psychology", "economics", "political science", "anthropology", "geography", "demography", "criminology", "education research", "communication studies", "public policy", "urban planning"],
+    "physical_sciences": ["physics", "chemistry", "astronomy", "astrophysics", "geoscience", "geology", "atmospheric science", "oceanography", "hydrology", "climate", "earth science", "materials", "thermodynamics", "quantum"],
+    "environmental": ["environment", "ecology", "conservation", "sustainability", "renewable energy", "clean energy", "biodiversity", "ecosystem", "pollution", "climate change", "global warming", "carbon", "water quality", "air quality", "deforestation"],
+    "mathematics": ["mathematics", "statistics", "applied mathematics", "computational mathematics", "operations research", "probability", "algebra", "topology", "number theory", "numerical analysis"],
+    "humanities": ["history", "philosophy", "linguistics", "literature", "art history", "archaeology", "cultural studies", "ethics", "religion", "classics"],
+    "agriculture": ["agriculture", "food science", "agronomy", "horticulture", "animal science", "aquaculture", "plant science", "crop", "soil science", "food security", "nutrition"],
+    "health_services": ["health services", "healthcare", "nursing", "pharmacy", "public health", "health policy", "telemedicine", "mental health", "substance abuse", "disability", "aging", "geriatrics", "pediatrics", "maternal health"]
+  },
+  "methods_approaches": {
+    "experimental": ["randomized controlled trial", "rct", "clinical trial", "experiment", "laboratory study", "in vitro", "in vivo", "bench research", "field experiment", "pilot study"],
+    "computational": ["simulation", "modeling", "computational", "algorithm development", "software development", "data analysis", "statistical analysis", "bioinformatics", "cheminformatics", "finite element", "monte carlo"],
+    "observational": ["observational study", "cohort study", "case-control", "cross-sectional", "longitudinal", "survey", "questionnaire", "interview", "focus group", "ethnography"],
+    "systematic_review": ["systematic review", "meta-analysis", "literature review", "scoping review", "narrative review"],
+    "mixed_methods": ["mixed methods", "qualitative", "quantitative", "triangulation"],
+    "engineering_design": ["design", "prototype", "fabrication", "manufacturing", "engineering design", "proof of concept", "feasibility"],
+    "ai_ml": ["machine learning", "deep learning", "neural network", "ai", "artificial intelligence", "predictive model", "classification", "clustering", "regression", "natural language processing"],
+    "translational": ["translational", "bench-to-bedside", "phase 1", "phase 2", "phase 3", "clinical validation", "technology transfer"]
+  },
+  "populations": {
+    "pediatric": ["children", "child", "pediatric", "youth", "adolescent", "infant", "neonatal", "juvenile"],
+    "adult": ["adult", "working age", "18-65"],
+    "elderly": ["elderly", "older adult", "geriatric", "aging", "senior", "65+"],
+    "women": ["women", "female", "maternal", "prenatal", "postpartum", "breast cancer"],
+    "minority": ["minority", "underrepresented", "disparities", "racial", "ethnic", "hispanic", "latino", "african american", "black", "indigenous", "native american", "asian american"],
+    "rural": ["rural", "underserved", "remote", "frontier"],
+    "low_income": ["low income", "poverty", "socioeconomic", "disadvantaged", "vulnerable", "homeless"],
+    "veterans": ["veteran", "military", "service member", "armed forces"],
+    "disabled": ["disability", "disabled", "impairment", "accessibility"],
+    "global": ["global health", "developing country", "low-income country", "middle-income country", "lmic", "international"]
+  },
+  "sponsor_themes": {
+    "workforce_development": ["workforce", "training", "education", "career development", "mentorship", "fellowship", "internship", "student", "graduate", "postdoctoral"],
+    "innovation": ["innovation", "entrepreneurship", "startup", "commercialization", "technology transfer", "sbir", "sttr", "spin-off", "venture"],
+    "equity_inclusion": ["diversity", "inclusion", "equity", "broadening participation", "underrepresented", "hbcu", "tribal college"],
+    "infrastructure": ["infrastructure", "core facility", "instrumentation", "equipment", "biobank", "data repository", "shared resource"],
+    "collaboration": ["collaboration", "partnership", "consortium", "multi-institutional", "interdisciplinary", "team science"],
+    "early_career": ["early career", "new investigator", "junior faculty", "k award", "career award", "first grant"],
+    "translation": ["translation", "implementation", "dissemination", "scale up", "real world", "practice", "policy"],
+    "basic_research": ["basic research", "fundamental", "discovery", "mechanism", "hypothesis", "exploratory"]
+  }
+}
