@@ -290,6 +290,19 @@ class TestExport:
         store2 = FOAStore(store_path)
         assert store2.contains(sample_record.foa_id)
 
+    def test_foa_store_upsert_no_duplicate_lines(self, sample_record, tmp_path):
+        store_path = tmp_path / "store.jsonl"
+        store = FOAStore(store_path)
+
+        changed = store.upsert(sample_record)
+        assert changed is True
+        changed = store.upsert(sample_record)
+        assert changed is False
+
+        with open(store_path, "r", encoding="utf-8") as fh:
+            lines = [line for line in fh if line.strip()]
+        assert len(lines) == 1
+
 
 # ── Evaluation tests ──────────────────────────────────────────────────────────
 

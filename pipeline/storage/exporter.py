@@ -116,14 +116,26 @@ class FOAStore:
     def contains(self, foa_id: str) -> bool:
         return foa_id in self._records
 
-    def upsert(self, record: FOARecord):
-        self._records[record.foa_id] = record.to_dict()
-        self._flush_line(record)
+    def upsert(self, record: FOARecord) -> bool:
+        """
+        Insert or update by foa_id.
+        Returns True only when store contents changed.
+        """
+        next_record = record.to_dict()
+        prev_record = self._records.get(record.foa_id)
+        if prev_record == next_record:
+            return False
 
-    def _flush_line(self, record: FOARecord):
+        self._records[record.foa_id] = next_record
+        self._flush_snapshot()
+        return True
+
+    def _flush_snapshot(self):
+        """Rewrite full JSONL snapshot to avoid duplicate records."""
         self.store_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.store_path, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record.to_dict(), ensure_ascii=False) + "\n")
+        with open(self.store_path, "w", encoding="utf-8") as fh:
+            for foa_id in sorted(self._records.keys()):
+                fh.write(json.dumps(self._records[foa_id], ensure_ascii=False) + "\n")
 
     def all_records(self) -> List[dict]:
         return list(self._records.values())
