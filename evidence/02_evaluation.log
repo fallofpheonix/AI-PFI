@@ -1,0 +1,18 @@
+
+[FOA Pipeline] Running evaluation on built-in dataset...
+
+============================================================
+  FOA TAGGING EVALUATION REPORT
+============================================================
+  Examples evaluated : 8
+  Macro Precision    : 0.9479
+  Macro Recall       : 0.7079
+  Macro F1           : 0.8048
+------------------------------------------------------------
+  methods_approaches         P=1.000  R=0.778  F1=0.875  (support=9)
+  research_domains           P=0.917  R=0.846  F1=0.880  (support=13)
+  populations                P=1.000  R=0.571  F1=0.727  (support=7)
+  sponsor_themes             P=0.875  R=0.636  F1=0.737  (support=11)
+============================================================
+
+  Evaluation report → out/evaluation_report.json
