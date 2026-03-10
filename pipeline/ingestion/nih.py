@@ -37,7 +37,7 @@ class NIHIngester(BaseIngester):
 
     def _extract_rfa_id(self, url: str) -> Optional[str]:
         """Extract RFA/PA number from URL."""
-        m = re.search(r"(RFA|PA|PAR|PAS|NOT)-[A-Z]{2}-\d{2}-\d{3}", url, re.IGNORECASE)
+        m = re.search(r"(?:RFA|PA|PAR|PAS|NOT)-(?:[A-Z]{2}-)?\d{2}-\d{3}", url, re.IGNORECASE)
         if m:
             return m.group(0)
         return None

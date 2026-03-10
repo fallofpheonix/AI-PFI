@@ -204,7 +204,7 @@ class HTMLExtractor:
     def _find_foa_id(self, text: str, source: str) -> str:
         """Try to find a funding opportunity identifier."""
         patterns = [
-            r"(PA|RFA|PAR|PAS|NOT)-[A-Z]{2}-\d{2}-\d{3}",         # NIH style
+            r"(?:PA|RFA|PAR|PAS|NOT)-(?:[A-Z]{2}-)?\d{2}-\d{3}",  # NIH styles
             r"Opportunity\s+Number[:\s]+([A-Z0-9\-]+)",
             r"FOA\s*[#:\s]+([A-Z0-9\-]+)",
             r"NSF[\s\-](\d{2}-\d{3,4})",

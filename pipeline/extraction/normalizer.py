@@ -11,7 +11,7 @@ import re
 import logging
 from dataclasses import dataclass, field, asdict
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ class FOANormalizer:
         rec.description = self._clean_str(extracted.get("description", ""), max_len=5000)
         rec.award_range = self._clean_award_range(extracted.get("award_range", {}))
         rec.source_url = extracted.get("source_url", "")
-        rec.ingested_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        rec.ingested_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         if raw_foa:
             rec.source_name = raw_foa.source_name
