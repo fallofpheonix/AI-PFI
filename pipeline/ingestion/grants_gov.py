@@ -12,7 +12,7 @@ from .base import BaseIngester, RawFOA
 
 logger = logging.getLogger(__name__)
 
-GRANTS_GOV_API = "https://api.grants.gov/v1/api/opportunity/details"
+GRANTS_GOV_API = "https://api.grants.gov/v1/api/fetchOpportunity"
 GRANTS_GOV_SEARCH = "https://api.grants.gov/v1/api/search"
 
 
@@ -59,10 +59,10 @@ class GrantsGovIngester(BaseIngester):
         """Use the Grants.gov REST API to pull structured data."""
         import requests, json
 
-        params = {"oppId": opp_id}
-        resp = requests.get(
+        payload = {"opportunityId": int(opp_id)}
+        resp = requests.post(
             GRANTS_GOV_API,
-            params=params,
+            json=payload,
             headers=self.headers,
             timeout=self.timeout,
         )

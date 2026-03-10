@@ -88,6 +88,38 @@ def _extract_award_range(text: str) -> dict:
     return result
 
 
+def _join_applicant_types(value) -> str:
+    """Normalize Grants.gov applicantTypes payloads to a string."""
+    if not value:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts = []
+        for item in value:
+            if isinstance(item, dict):
+                desc = item.get("description")
+                if desc:
+                    parts.append(str(desc))
+            elif item:
+                parts.append(str(item))
+        return "; ".join(parts)
+    return str(value)
+
+
+def _safe_amount(value):
+    """Parse integer-like funding values; return None for blank/non-numeric."""
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s or s.lower() in {"none", "n/a", "na", "null"}:
+        return None
+    try:
+        return int(float(s.replace(",", "").replace("$", "")))
+    except ValueError:
+        return None
+
+
 # ── Main extractor class ───────────────────────────────────────────────────────
 
 class HTMLExtractor:
@@ -129,22 +161,65 @@ class HTMLExtractor:
         result = {}
 
         if source == "grants.gov":
-            opp = data.get("opportunity", data.get("opportunityDetail", data))
-            result["foa_id"] = str(opp.get("opportunityNumber") or opp.get("id", ""))
-            result["title"] = opp.get("opportunityTitle") or opp.get("title", "")
-            result["agency"] = opp.get("agencyName") or opp.get("agencyCode", "")
-            result["open_date"] = _parse_date(str(opp.get("openDate") or opp.get("postDate", "")))
-            result["close_date"] = _parse_date(str(opp.get("closeDate") or opp.get("archiveDate", "")))
-            result["eligibility"] = opp.get("eligibilityDescription") or opp.get("applicantTypes", "")
-            result["description"] = opp.get("description") or opp.get("synopsis", "")
-            award_min = opp.get("awardFloor") or opp.get("awardMinimum")
-            award_max = opp.get("awardCeiling") or opp.get("awardMaximum")
-            if award_min or award_max:
+            # Supports legacy opportunity/details payloads and fetchOpportunity payloads.
+            root = data.get("data", data)
+            synopsis = root.get("synopsis", {}) if isinstance(root, dict) else {}
+            opp = data.get("opportunity", data.get("opportunityDetail", root))
+
+            result["foa_id"] = str(
+                synopsis.get("opportunityId")
+                or opp.get("opportunityNumber")
+                or synopsis.get("opportunityNumber")
+                or opp.get("id", "")
+            )
+            result["title"] = (
+                opp.get("opportunityTitle")
+                or synopsis.get("opportunityTitle")
+                or opp.get("title", "")
+            )
+            result["agency"] = (
+                synopsis.get("agencyName")
+                or opp.get("agencyName")
+                or opp.get("agencyCode")
+                or synopsis.get("agencyCode", "")
+            )
+            result["open_date"] = _parse_date(str(
+                opp.get("openDate")
+                or opp.get("postDate")
+                or synopsis.get("postingDateStr")
+                or synopsis.get("postingDate", "")
+            ))
+            result["close_date"] = _parse_date(str(
+                opp.get("closeDate")
+                or synopsis.get("responseDateStr")
+                or synopsis.get("archiveDateStr")
+                or opp.get("archiveDate")
+                or synopsis.get("responseDate", "")
+            ))
+            result["eligibility"] = (
+                synopsis.get("applicantEligibilityDesc")
+                or opp.get("eligibilityDescription")
+                or _join_applicant_types(synopsis.get("applicantTypes") or opp.get("applicantTypes"))
+                or ""
+            )
+            result["description"] = (
+                synopsis.get("synopsisDesc")
+                or opp.get("description")
+                or opp.get("synopsis", "")
+            )
+
+            award_min = _safe_amount(
+                synopsis.get("awardFloor") or opp.get("awardFloor") or opp.get("awardMinimum")
+            )
+            award_max = _safe_amount(
+                synopsis.get("awardCeiling") or opp.get("awardCeiling") or opp.get("awardMaximum")
+            )
+            if award_min is not None or award_max is not None:
                 result["award_range"] = {}
-                if award_min:
-                    result["award_range"]["min"] = int(award_min)
-                if award_max:
-                    result["award_range"]["max"] = int(award_max)
+                if award_min is not None:
+                    result["award_range"]["min"] = award_min
+                if award_max is not None:
+                    result["award_range"]["max"] = award_max
 
         elif source == "nsf":
             awards = data.get("response", {}).get("award", [{}])
