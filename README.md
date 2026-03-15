@@ -1,270 +1,76 @@
-# FOA Intelligence Pipeline
+# AI-Powered Funding Intelligence
 
-An open-source pipeline that automatically ingests Funding Opportunity Announcements (FOAs) from public sources, extracts structured fields, and applies ontology-based semantic tags to support institutional research discovery and grant matching.
+Open-source pipeline for ingesting Funding Opportunity Announcements (FOAs), extracting structured funding metadata, and applying ontology-based semantic tags for downstream research discovery and grant matching.
 
-## Reviewer Quick Start
+## Purpose
 
-```bash
-pip install -r requirements.txt
-python main.py --url "https://www.grants.gov/web/grants/view-opportunity.html?oppId=350002" --out_dir ./out --no-embeddings
-```
+This repository is being organized as a documentation-first engineering base for future development. The primary project knowledge now lives in the markdown files under `docs/` and in this `README.md`.
 
-Expected artifacts:
-```
-out/foa.json
-out/foa.csv
-```
+## Primary Documentation
 
-## Features
+- [Project Scope](docs/PROJECT_SCOPE.md)
+- [System Architecture](docs/ARCHITECTURE.md)
+- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
+- [Evaluation Plan](docs/EVALUATION.md)
+- [GSoC Proposal Draft](docs/GSOC_PROPOSAL.md)
+- [Contribution Guide](CONTRIBUTING.md)
 
-- **Multi-source ingestion** — Grants.gov, NSF, NIH (with API + HTML scraping + PDF fallback)
-- **Structured extraction** — Normalizes all FOAs into a consistent JSON/CSV schema
-- **Hybrid semantic tagging** — Rule-based + embedding similarity against a controlled ontology
-- **LLM tagging** (stretch) — Optional Claude/OpenAI-assisted classification
-- **Persistent store** — Incremental update workflow (JSON-lines, skip already-ingested FOAs)
-- **Vector search** (stretch) — FAISS/Chroma similarity search
-- **Evaluation suite** — 8-example gold-standard dataset with precision/recall/F1 metrics
+## Current Repository Scope
 
----
+Core pipeline capabilities in the codebase:
+- Multi-source FOA ingestion via public agency pages and APIs
+- Structured extraction and schema normalization
+- Hybrid semantic tagging:
+  - deterministic rule-based tagging
+  - embedding similarity tagging
+  - optional LLM-assisted tagging
+- JSON and CSV export
+- Basic built-in evaluation utilities
 
 ## Quick Start
 
-### 1. Install dependencies
+Create a virtual environment and install dependencies:
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-For embedding-based tagging (recommended):
-```bash
-pip install sentence-transformers
-```
-
-### 2. Run the screening task (single FOA)
+Process a single FOA:
 
 ```bash
 python main.py --url "https://www.grants.gov/web/grants/view-opportunity.html?oppId=350002" --out_dir ./out --no-embeddings
 ```
 
-Outputs:
-```
-out/foa.json
-out/foa.csv
-```
-
-### 3. Batch ingest
+Run the built-in evaluation:
 
 ```bash
-python main.py --batch urls.txt --out_dir ./out
+python main.py --evaluate --out_dir ./out --no-embeddings
 ```
 
-`urls.txt` — one URL per line (lines starting with `#` are ignored).
+## Repository Layout
 
-### 4. Run evaluation
-
-```bash
-python main.py --evaluate --out_dir ./out
+```text
+main.py
+ontology/
+pipeline/
+tests/
+docs/
+CONTRIBUTING.md
+requirements.txt
 ```
 
-Outputs `out/evaluation_report.json` with precision/recall/F1 per tag category.
+## Development Status
 
-### 5. Enable LLM tagging (stretch goal)
+The repository contains a working baseline implementation. The next phase is to harden it into a maintainable open-source project with:
+- clearer documentation ownership
+- stronger evaluation discipline
+- cleaner reproducibility controls
+- a roadmap aligned to future HumanAI/ISSR integration
 
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-python main.py --url "..." --out_dir ./out --llm
-```
+## Notes
 
----
-
-## Output Schema
-
-Every processed FOA produces a record conforming to this schema (`schema_version: "1.0"`):
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `foa_id` | string | Funding opportunity number (generated if missing) |
-| `title` | string | FOA title |
-| `agency` | string | Funding agency name |
-| `open_date` | ISO-8601 | Date posted / open |
-| `close_date` | ISO-8601 | Application deadline |
-| `eligibility` | string | Eligible applicant types |
-| `description` | string | Program description / synopsis |
-| `award_range.min` | int | Minimum award amount (USD) |
-| `award_range.max` | int | Maximum award amount (USD) |
-| `source_url` | string | Original FOA URL |
-| `source_name` | string | `grants.gov` / `nsf` / `nih` |
-| `ingested_at` | ISO-8601 datetime | Pipeline ingestion timestamp |
-| `tags.research_domains` | list[string] | Ontology subcategory labels |
-| `tags.methods_approaches` | list[string] | Ontology subcategory labels |
-| `tags.populations` | list[string] | Ontology subcategory labels |
-| `tags.sponsor_themes` | list[string] | Ontology subcategory labels |
-| `schema_version` | string | `"1.0"` |
-
-### Sample Output Keys (Reviewer Reference)
-
-Canonical output key for the program narrative is `description`.
-If a checker expects `program_description`, map as:
-
-| Canonical output key | Equivalent screening-task key |
-|---|---|
-| `description` | `program_description` |
-| `award_range.min` / `award_range.max` | `award_range` |
-
----
-
-## Project Structure
-
-```
-foa-pipeline/
-├── main.py                          # CLI entry point
-├── requirements.txt
-├── README.md
-│
-├── pipeline/
-│   ├── __init__.py                  # Pipeline orchestrator class
-│   │
-│   ├── ingestion/
-│   │   ├── base.py                  # BaseIngester + RawFOA dataclass
-│   │   ├── grants_gov.py            # Grants.gov (API + HTML)
-│   │   ├── nsf.py                   # NSF (API + HTML + PDF)
-│   │   ├── nih.py                   # NIH (Reporter API + Guide pages)
-│   │   └── __init__.py              # IngestionRouter
-│   │
-│   ├── extraction/
-│   │   ├── html_extractor.py        # Regex/heuristic field extractor
-│   │   ├── pdf_extractor.py         # PDF → text (pdfminer / pypdf)
-│   │   ├── normalizer.py            # FOARecord schema + FOANormalizer
-│   │   └── __init__.py
-│   │
-│   ├── tagging/
-│   │   ├── ontology.py              # Ontology loader
-│   │   ├── rule_based.py            # Keyword/regex tagger
-│   │   ├── embedding_tagger.py      # sentence-transformers tagger
-│   │   ├── tagger.py                # HybridTagger (union strategy)
-│   │   └── __init__.py
-│   │
-│   ├── storage/
-│   │   ├── exporter.py              # JSON/CSV export + FOAStore
-│   │   └── __init__.py
-│   │
-│   └── evaluation/
-│       ├── metrics.py               # eval dataset + P/R/F1 computation
-│       └── __init__.py
-│
-├── ontology/
-│   └── foa_ontology.json            # Controlled ontology (4 categories)
-│
-├── out/                             # Default output directory
-│   ├── foa.json
-│   └── foa.csv
-│
-└── tests/
-    └── test_pipeline.py             # pytest test suite (35 tests)
-```
-
----
-
-## Ontology
-
-The controlled ontology (`ontology/foa_ontology.json`) covers four top-level categories with subcategory labels and associated keyword terms:
-
-| Category | Subcategories (examples) |
-|----------|--------------------------|
-| `research_domains` | biomedical, computer_science, engineering, environmental, social_sciences, ... |
-| `methods_approaches` | experimental, computational, ai_ml, systematic_review, mixed_methods, ... |
-| `populations` | pediatric, elderly, minority, rural, veterans, global, ... |
-| `sponsor_themes` | workforce_development, innovation, equity_inclusion, early_career, ... |
-
----
-
-## Tagging Architecture
-
-```
-FOA Text
-   │
-   ├──▶ RuleBasedTagger      (regex keyword matching — deterministic, high precision)
-   │         │
-   └──▶ EmbeddingTagger      (cosine similarity via sentence-transformers — semantic coverage)
-             │
-             ▼
-         HybridTagger         (union merge: include tag if either method fires)
-             │
-             ▼ (optional)
-         LLM Classifier       (Claude/OpenAI — stretch goal, requires API key)
-```
-
----
-
-## Supported Sources
-
-| Source | URL patterns | Method |
-|--------|-------------|--------|
-| Grants.gov | `grants.gov/...?oppId=...` | REST API + HTML scraping |
-| NSF | `nsf.gov/...` | API + HTML + PDF |
-| NIH | `grants.nih.gov/...`, `nih.gov/...` | Reporter API + Guide pages |
-
-## Known Source Caveats
-
-- Public FOA URLs can intermittently return `404`/gateway pages due source-side changes.
-- Grants.gov legacy endpoint `/v1/api/opportunity/details` is deprecated; this project uses `/v1/api/fetchOpportunity`.
-- Known working validation URL:
-  - `https://www.grants.gov/web/grants/view-opportunity.html?oppId=350002`
-
----
-
-## CLI Reference
-
-```
-python main.py [OPTIONS]
-
-Options:
-  --url URL             FOA URL to ingest
-  --out_dir DIR         Output directory (default: ./out)
-  --batch FILE          File with one URL per line
-  --no-embeddings       Disable embedding-based tagging
-  --llm                 Enable LLM-assisted tagging
-  --evaluate            Run built-in evaluation suite
-  --store FILE          Path to persistent JSON-lines store
-  --ontology FILE       Path to custom ontology JSON
-  --verbose / -v        Enable debug logging
-```
-
----
-
-## Running Tests
-
-```bash
-# With pytest (if installed):
-pytest tests/ -v
-
-# Without pytest:
-python -m unittest tests.test_pipeline -v
-```
-
----
-
-## Stretch Goals
-
-| Goal | Status | Notes |
-|------|--------|-------|
-| NIH source | ✅ Implemented | `pipeline/ingestion/nih.py` |
-| LLM tagging | ✅ Implemented | Pass `--llm` flag + set API key |
-| Vector indexing | 🔲 Scaffold ready | Uncomment FAISS/Chroma in `requirements.txt` |
-| Search UI | 🔲 Planned | CLI search via `--query` flag |
-
----
-
-## Reproducibility
-
-1. Clone repository
-2. `pip install -r requirements.txt`
-3. `python main.py --url "<your-url>" --out_dir ./out`
-
-All outputs are deterministic for identical input text when using rule-based tagging only (`--no-embeddings`). Embedding-based tags may vary slightly across hardware due to floating-point precision.
-
----
-
-## License
-
-MIT License. See `LICENSE` for details.
+- Generated outputs under `out/` are intentionally not versioned.
+- Validation logs and temporary review artifacts are intentionally not versioned.
+- Historical local documents have been migrated into canonical `docs/` files and removed from the working tree.
