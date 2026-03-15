@@ -6,5 +6,7 @@ Pytest configuration — adds src/ to sys.path so that
 import sys
 from pathlib import Path
 
-# Insert src/ at the front of sys.path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+# Ensure src/ is on sys.path
+src_path = str(Path(__file__).resolve().parent.parent / "src")
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
