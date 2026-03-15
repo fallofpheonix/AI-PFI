@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from typing import List, Union
 
-from pipeline.extraction.normalizer import FOARecord
+from ..extraction.normalizer import FOARecord
 
 logger = logging.getLogger(__name__)
 
