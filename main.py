@@ -21,8 +21,10 @@ import sys
 import os
 from pathlib import Path
 
-# ── Make sure the project root is on sys.path ─────────────────────────────────
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# ── Make sure the project root and src/ are on sys.path ────────────────────────
+PROJECT_ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
 def setup_logging(verbose: bool = False):
