@@ -6,7 +6,9 @@ import json
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-_DEFAULT_ONTOLOGY = Path(__file__).resolve().parents[2] / "ontology" / "foa_ontology.json"
+_DEFAULT_ONTOLOGY = (
+    Path(__file__).resolve().parents[2] / "ontology" / "foa_ontology.json"
+)
 
 
 class Ontology:

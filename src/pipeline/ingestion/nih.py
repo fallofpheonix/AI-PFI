@@ -23,7 +23,11 @@ class NIHIngester(BaseIngester):
         return any(d in url.lower() for d in ["nih.gov", "grants.nih.gov"])
 
     def ingest(self, url: str) -> RawFOA:
-        if url.lower().endswith(".html") or "rfa" in url.lower() or "pa-" in url.lower():
+        if (
+            url.lower().endswith(".html")
+            or "rfa" in url.lower()
+            or "pa-" in url.lower()
+        ):
             return self._ingest_nih_guide_page(url)
 
         rfa_id = self._extract_rfa_id(url)
@@ -37,13 +41,16 @@ class NIHIngester(BaseIngester):
 
     def _extract_rfa_id(self, url: str) -> Optional[str]:
         """Extract RFA/PA number from URL."""
-        m = re.search(r"(?:RFA|PA|PAR|PAS|NOT)-(?:[A-Z]{2}-)?\d{2}-\d{3}", url, re.IGNORECASE)
+        m = re.search(
+            r"(?:RFA|PA|PAR|PAS|NOT)-(?:[A-Z]{2}-)?\d{2}-\d{3}", url, re.IGNORECASE
+        )
         if m:
             return m.group(0)
         return None
 
     def _ingest_via_api(self, url: str, rfa_id: str) -> RawFOA:
         import requests, json
+
         payload = {
             "criteria": {"foa": [rfa_id]},
             "limit": 10,

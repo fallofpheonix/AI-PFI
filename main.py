@@ -19,6 +19,10 @@ import json
 import logging
 import sys
 import os
+
+# ── Ensure HF Cache is isolated to prevent permission errors ───────────────────
+os.environ["HF_HOME"] = os.getenv("HF_HOME", "/tmp/huggingface_cache")
+
 from pathlib import Path
 
 # ── Make sure the project root and src/ are on sys.path ────────────────────────
@@ -59,15 +63,39 @@ Examples:
   python main.py --url "..." --out_dir ./out --llm
         """,
     )
-    parser.add_argument("--url", type=str, help="FOA URL to ingest (Grants.gov / NSF / NIH)")
-    parser.add_argument("--out_dir", type=str, default="./out", help="Output directory (default: ./out)")
-    parser.add_argument("--batch", type=str, help="File containing one URL per line for batch processing")
-    parser.add_argument("--no-embeddings", action="store_true", help="Disable embedding-based tagging")
-    parser.add_argument("--llm", action="store_true", help="Enable LLM-assisted tagging (stretch goal)")
-    parser.add_argument("--evaluate", action="store_true", help="Run evaluation on built-in eval dataset")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Enable debug logging")
-    parser.add_argument("--store", type=str, help="Path to persistent JSON-lines store for incremental updates")
-    parser.add_argument("--ontology", type=str, help="Path to custom ontology JSON file")
+    parser.add_argument(
+        "--url", type=str, help="FOA URL to ingest (Grants.gov / NSF / NIH)"
+    )
+    parser.add_argument(
+        "--out_dir", type=str, default="./out", help="Output directory (default: ./out)"
+    )
+    parser.add_argument(
+        "--batch",
+        type=str,
+        help="File containing one URL per line for batch processing",
+    )
+    parser.add_argument(
+        "--no-embeddings", action="store_true", help="Disable embedding-based tagging"
+    )
+    parser.add_argument(
+        "--llm", action="store_true", help="Enable LLM-assisted tagging (stretch goal)"
+    )
+    parser.add_argument(
+        "--evaluate",
+        action="store_true",
+        help="Run evaluation on built-in eval dataset",
+    )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "--store",
+        type=str,
+        help="Path to persistent JSON-lines store for incremental updates",
+    )
+    parser.add_argument(
+        "--ontology", type=str, help="Path to custom ontology JSON file"
+    )
     return parser
 
 
@@ -94,7 +122,9 @@ def process_single(pipeline, url: str, out_dir: str) -> int:
     if record.award_range:
         lo = record.award_range.get("min")
         hi = record.award_range.get("max")
-        print(f"  Award      : {f'${lo:,}' if lo else ''}{' – ' if lo and hi else ''}{f'${hi:,}' if hi else ''}")
+        print(
+            f"  Award      : {f'${lo:,}' if lo else ''}{' – ' if lo and hi else ''}{f'${hi:,}' if hi else ''}"
+        )
     print(f"\n  Tags:")
     for cat, tags in record.tags.items():
         if tags:
@@ -106,23 +136,34 @@ def process_single(pipeline, url: str, out_dir: str) -> int:
 
 
 def process_batch(pipeline, batch_file: str, out_dir: str) -> int:
-    """Process all URLs in a text file."""
+    """Process all URLs in a text file concurrently."""
     from pipeline.storage import export_batch_json, export_batch_csv
+    import concurrent.futures
 
     with open(batch_file, "r") as fh:
-        urls = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+        urls = [
+            line.strip() for line in fh if line.strip() and not line.startswith("#")
+        ]
 
     print(f"[FOA Pipeline] Batch mode: {len(urls)} URLs")
     records = []
     errors = 0
-    for i, url in enumerate(urls, 1):
-        print(f"  [{i}/{len(urls)}] {url}")
+
+    def process_url(url):
         try:
-            record = pipeline.process(url)
-            records.append(record)
+            return pipeline.process(url)
         except Exception as e:
-            print(f"    [ERROR] {e}", file=sys.stderr)
-            errors += 1
+            print(f"    [ERROR] {url}: {e}", file=sys.stderr)
+            return None
+
+    # Use ThreadPoolExecutor for IO-bound concurrent ingestion
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        for i, record in enumerate(executor.map(process_url, urls), 1):
+            if record:
+                records.append(record)
+                print(f"  [{i}/{len(urls)}] {record.source_url} -> {record.foa_id}")
+            else:
+                errors += 1
 
     if records:
         export_batch_json(records, out_dir)
@@ -160,6 +201,7 @@ def main():
 
     # Build pipeline
     from pipeline import Pipeline
+
     pipeline = Pipeline(
         use_embeddings=not args.no_embeddings,
         use_llm=args.llm,

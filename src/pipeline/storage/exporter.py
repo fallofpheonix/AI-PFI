@@ -20,7 +20,10 @@ logger = logging.getLogger(__name__)
 
 # ── Single-record helpers (screening task compatible) ─────────────────────────
 
-def export_json(record: FOARecord, out_dir: Union[str, Path], filename: str = "foa.json") -> Path:
+
+def export_json(
+    record: FOARecord, out_dir: Union[str, Path], filename: str = "foa.json"
+) -> Path:
     """Write a single FOARecord to <out_dir>/<filename>."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -31,7 +34,9 @@ def export_json(record: FOARecord, out_dir: Union[str, Path], filename: str = "f
     return out_path
 
 
-def export_csv(record: FOARecord, out_dir: Union[str, Path], filename: str = "foa.csv") -> Path:
+def export_csv(
+    record: FOARecord, out_dir: Union[str, Path], filename: str = "foa.csv"
+) -> Path:
     """Write a single FOARecord to <out_dir>/<filename>."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -51,6 +56,7 @@ def export_csv(record: FOARecord, out_dir: Union[str, Path], filename: str = "fo
 
 
 # ── Batch helpers ─────────────────────────────────────────────────────────────
+
 
 def export_batch_json(
     records: List[FOARecord],
@@ -92,6 +98,7 @@ def export_batch_csv(
 
 
 # ── Update workflow ────────────────────────────────────────────────────────────
+
 
 class FOAStore:
     """

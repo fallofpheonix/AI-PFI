@@ -57,7 +57,7 @@ class NSFIngester(BaseIngester):
         params = {
             "programId": prog_id,
             "printFields": "id,title,agency,date,abstractText,fundProgramName,"
-                           "awardeeName,startDate,expDate,fundsObligatedAmt",
+            "awardeeName,startDate,expDate,fundsObligatedAmt",
         }
         resp = requests.get(
             NSF_PROGRAMS_API,

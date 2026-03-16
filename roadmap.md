@@ -1,35 +1,47 @@
-# Architecture & Roadmap Plan: ISSR (Task 4 - FOA Ingestion)
+# AI-PFI System Architecture Roadmap
+**System Classification: DEVELOPMENT**
 
-## 1. Roadmap
-- **Phase 1: Ingestion & Normalization**
-  - Use `requests`/`BeautifulSoup` to scrape HTML sources (Grants.gov).
-  - Use `PyPDF2`/`PDFMiner` to parse NSF PDF forms.
-  - Implement regex and rule-based logic to extract specific unstructured strings into the ISO-standard schema (Dates, Amounts).
-- **Phase 2: Semantic Ontology Mapping**
-  - Define the domain vocabulary ontology mapping.
-  - Utilize `sentence-transformers` to embed the extracted unstructured text descriptions and calculate cosine similarity against ontology anchors.
-- **Phase 3: Storage & CLI Packaging**
-  - Implement JSON/CSV output serialization logic.
-  - Package the scraper via a robust `argparse` CLI (`python main.py --url...`).
-- **Phase 4: Evaluation Metrics (Stretch: Search)**
-  - Establish a golden set of 50-100 manually annotated FOAs to compute F1/Recall/Precision scores for the automated semantic tagger.
-  - (Stretch) Integrate a vector DB index (`FAISS` or `Chroma`) to allow semantic search queries across the extracted database.
+Following a comprehensive 11-Phase Audit and live-repair session, the AI-PFI system architecture is definitively rated as a **DEVELOPMENT** candidate. 
 
-## 2. Architecture Plan
-- **Spider Layer**: A modular Python class meant to be subclassed per agency (e.g., `GrantsGovSpider`, `NSFSpider`) allowing highly specific HTML/PDF parsing logic.
-- **NLP Tagging Layer**: 
-  - Module 1: Deterministic dictionary mapping (Rule-based).
-  - Module 2: Embedding Similarity matcher (HuggingFace transformers) falling back to zero-shot LLM (Gemini API) for highly ambiguous descriptions.
-- **Data Persistence**: Local JSON/CSV serialization, abstracted behind a DAO interface for future integration into Postgres/MongoDB.
+While the underlying NLP extraction algorithms and basic tagging workflows are structurally clean and functional, the system entirely lacks the infrastructure required for production scaling, such as a database layer, a web frontend, active CI/CD, and asynchronous APIs.
 
-## 3. Changes Needed
-- Ensure the screening task `main.py` is capable of handling HTTP timeouts and Malformed HTML without throwing fatal unhandled exceptions.
+The following Priority Repair Roadmap outlines the necessary engineering steps required to transition this system to an enterprise-grade `PRODUCTION READY` state.
 
-## 4. Current Problems
-- PDF parsing from federal agencies is notoriously unstable due to non-standardized OCR embeds and unpredictable table layouts within the PDFs.
+---
 
-## 5. Problems It Can Cause
-- **Hallucinated Extractions**: An LLM-based tagger might hallucinate Award Amounts or misread tricky Open/Close dates (e.g., reading "2027" as "2026"), which would severely impact institutional grant application pipelines.
+## 🔴 CRITICAL FIXES (Pre-Requisites for Staging)
+These items block the system from being deployed concurrently or exposed to end-users.
 
-## 6. Future Work
-- Connecting the output schema directly to an active directory of university professors/investigators, automatically emailing matching FOAs to investigators based on their previous publication embeddings.
+1. **Transactional Database Layer**
+   - **Context**: The `FOAStore` relies on naive JSONL file rewrites (`self._flush_snapshot()`) on every `.upsert()`.
+   - **Action**: Replace `FOAStore` with a real relational database (e.g., **PostgreSQL** with `JSONB` or **SQLite** for staging) via an ORM like SQLAlchemy to enforce ACID compliance and prevent data corruption during parallel processing.
+2. **Build System & CI/CD Validation**
+   - **Context**: `requirements.txt` lacks hashed versions, and there is no automated testing hook.
+   - **Action**: Migrate dependencies to `Poetry` or `pip-tools`. Implement a `.github/workflows/ci.yml` file to automatically run `pytest` and `flake8` on PRs. Create a `Dockerfile` to standardize execution environments.
+3. **ML Pipeline Dataset Engineering**
+   - **Context**: The evaluation dataset is mocked with 8 static records inside the `metrics.py` file.
+   - **Action**: Construct a dedicated `data/eval.jsonl` representing at least 250 diverse FOAs. Separate Train/Val pipelines for metric evaluation.
+
+## 🟠 HIGH IMPACT IMPROVEMENTS (To Reach Production)
+These items deliver the most direct business value to scaling operations.
+
+1. **Web API & Frontend Server**
+   - **Context**: Operation is locked within an IO-bound CLI script (`main.py`).
+   - **Action**: Implement a **FastAPI** backend to expose endpoints (`/api/v1/foa/ingest`, `/api/v1/foa/search`). Build a lightweight Web Frontend (e.g., **Next.js** or **Streamlit**) that consumes this API to allow end-users to search and filter FOA tags visually.
+2. **Domain-Specific Fine Tuning**
+   - **Context**: Uses baseline `sentence-transformers/all-MiniLM-L6-v2` with no domain awareness of federal grants.
+   - **Action**: Fine-tune contrastive embeddings on government terminology, or migrate to `PubMedBERT` or MS-MARCO derivatives to significantly boost retrieval recall.
+
+## 🟡 MEDIUM IMPACT OPTIMIZATIONS
+These items enhance reliability and lower operational costs.
+
+1. **Robust LLM Parsing & Retry Architectures**
+   - **Context**: The `LLMTagger` relies on brittle Regex stripping for JSON generation without structural enforcement.
+   - **Action**: Wrap Anthropic and OpenAI calls in the `instructor` or `pydantic` libraries to force guaranteed JSON schemas, automatically retrying on formatting or HTTP timeout failures.
+2. **Rate Limiting & Queue Orchestration**
+   - **Context**: The newly added `ThreadPoolExecutor` indiscriminately requests URLs to Grants.gov.
+   - **Action**: Implement an asynchronous Task Queue (e.g., **Celery** + Redis) with explicit rate limiters to avoid being blacklisted by scraping targets.
+
+## 🟢 LOW PRIORITY REFACTORS
+1. **Systematic Pre-Commit Hooks**
+   - Enforce `black`, `flake8`, and `isort` statically using `.pre-commit-config.yaml`.

@@ -30,25 +30,25 @@ class FOARecord:
     """
 
     # ── Core identifiers ──────────────────────────────────────────────────────
-    foa_id: str = ""                  # Funding opportunity number / generated UUID
+    foa_id: str = ""  # Funding opportunity number / generated UUID
     title: str = ""
     agency: str = ""
 
     # ── Dates ─────────────────────────────────────────────────────────────────
-    open_date: str = ""               # ISO-8601
-    close_date: str = ""              # ISO-8601
+    open_date: str = ""  # ISO-8601
+    close_date: str = ""  # ISO-8601
 
     # ── Narrative ─────────────────────────────────────────────────────────────
     eligibility: str = ""
     description: str = ""
 
     # ── Financials ────────────────────────────────────────────────────────────
-    award_range: dict = field(default_factory=dict)   # {"min": int, "max": int}
+    award_range: dict = field(default_factory=dict)  # {"min": int, "max": int}
 
     # ── Provenance ────────────────────────────────────────────────────────────
     source_url: str = ""
-    source_name: str = ""             # "grants.gov" | "nsf" | "nih"
-    ingested_at: str = ""             # ISO-8601 datetime
+    source_name: str = ""  # "grants.gov" | "nsf" | "nih"
+    ingested_at: str = ""  # ISO-8601 datetime
 
     # ── Tags (filled by tagging module) ───────────────────────────────────────
     tags: dict = field(default_factory=dict)
@@ -68,7 +68,9 @@ class FOARecord:
         del d["award_range"]
         # Flatten tags
         for category, tag_list in d.get("tags", {}).items():
-            d[f"tags_{category}"] = "|".join(tag_list) if isinstance(tag_list, list) else str(tag_list)
+            d[f"tags_{category}"] = (
+                "|".join(tag_list) if isinstance(tag_list, list) else str(tag_list)
+            )
         del d["tags"]
         return d
 
@@ -76,11 +78,23 @@ class FOARecord:
     def csv_fieldnames(cls) -> list:
         """Return ordered CSV column headers."""
         return [
-            "foa_id", "title", "agency", "open_date", "close_date",
-            "eligibility", "description", "award_min", "award_max",
-            "source_url", "source_name", "ingested_at", "schema_version",
-            "tags_research_domains", "tags_methods_approaches",
-            "tags_populations", "tags_sponsor_themes",
+            "foa_id",
+            "title",
+            "agency",
+            "open_date",
+            "close_date",
+            "eligibility",
+            "description",
+            "award_min",
+            "award_max",
+            "source_url",
+            "source_name",
+            "ingested_at",
+            "schema_version",
+            "tags_research_domains",
+            "tags_methods_approaches",
+            "tags_populations",
+            "tags_sponsor_themes",
         ]
 
 
@@ -100,8 +114,12 @@ class FOANormalizer:
         rec.agency = self._clean_str(extracted.get("agency", ""), max_len=200)
         rec.open_date = self._clean_date(extracted.get("open_date", ""))
         rec.close_date = self._clean_date(extracted.get("close_date", ""))
-        rec.eligibility = self._clean_str(extracted.get("eligibility", ""), max_len=3000)
-        rec.description = self._clean_str(extracted.get("description", ""), max_len=5000)
+        rec.eligibility = self._clean_str(
+            extracted.get("eligibility", ""), max_len=3000
+        )
+        rec.description = self._clean_str(
+            extracted.get("description", ""), max_len=5000
+        )
         rec.award_range = self._clean_award_range(extracted.get("award_range", {}))
         rec.source_url = extracted.get("source_url", "")
         rec.ingested_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

@@ -105,12 +105,13 @@ EVAL_DATASET = [
 
 # ── Metrics ───────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class CategoryMetrics:
     precision: float = 0.0
     recall: float = 0.0
     f1: float = 0.0
-    support: int = 0       # number of gold positive items
+    support: int = 0  # number of gold positive items
     tp: int = 0
     fp: int = 0
     fn: int = 0
@@ -160,6 +161,7 @@ class EvaluationReport:
 
 # ── Evaluation runner ─────────────────────────────────────────────────────────
 
+
 def compute_metrics(
     predictions: List[Dict[str, List[str]]],
     gold_labels: List[Dict[str, List[str]]],
@@ -168,6 +170,8 @@ def compute_metrics(
     all_cats = set()
     for g in gold_labels:
         all_cats.update(g.keys())
+    for p in predictions:
+        all_cats.update(p.keys())
 
     per_cat: Dict[str, CategoryMetrics] = {}
 
@@ -183,17 +187,37 @@ def compute_metrics(
 
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        f1 = (2 * precision * recall / (precision + recall)
-              if (precision + recall) > 0 else 0.0)
+        f1 = (
+            2 * precision * recall / (precision + recall)
+            if (precision + recall) > 0
+            else 0.0
+        )
         per_cat[cat] = CategoryMetrics(
-            precision=precision, recall=recall, f1=f1,
-            support=support, tp=tp, fp=fp, fn=fn,
+            precision=precision,
+            recall=recall,
+            f1=f1,
+            support=support,
+            tp=tp,
+            fp=fp,
+            fn=fn,
         )
 
     cats_with_support = [m for m in per_cat.values() if m.support > 0]
-    macro_p = sum(m.precision for m in cats_with_support) / len(cats_with_support) if cats_with_support else 0
-    macro_r = sum(m.recall for m in cats_with_support) / len(cats_with_support) if cats_with_support else 0
-    macro_f = sum(m.f1 for m in cats_with_support) / len(cats_with_support) if cats_with_support else 0
+    macro_p = (
+        sum(m.precision for m in cats_with_support) / len(cats_with_support)
+        if cats_with_support
+        else 0
+    )
+    macro_r = (
+        sum(m.recall for m in cats_with_support) / len(cats_with_support)
+        if cats_with_support
+        else 0
+    )
+    macro_f = (
+        sum(m.f1 for m in cats_with_support) / len(cats_with_support)
+        if cats_with_support
+        else 0
+    )
 
     return EvaluationReport(
         per_category=per_cat,
@@ -204,7 +228,9 @@ def compute_metrics(
     )
 
 
-def run_evaluation(tagger, dataset: list = None, verbose: bool = True) -> EvaluationReport:
+def run_evaluation(
+    tagger, dataset: list = None, verbose: bool = True
+) -> EvaluationReport:
     """
     Run the tagger against the eval dataset and return an EvaluationReport.
 

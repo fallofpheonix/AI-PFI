@@ -47,7 +47,7 @@ class GrantsGovIngester(BaseIngester):
             r"oppId=(\d+)",
             r"opportunity/(\d+)",
             r"synopsisId=(\d+)",
-            r"/(\d{5,})",          # bare numeric segment ≥5 digits
+            r"/(\d{5,})",  # bare numeric segment ≥5 digits
         ]
         for pat in patterns:
             m = re.search(pat, url)

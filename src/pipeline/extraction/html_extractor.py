@@ -26,6 +26,7 @@ _DATE_PATTERNS = [
     (r"(\d{2}-\d{2}-\d{4})", "%m-%d-%Y"),
 ]
 
+
 def _parse_date(raw: str) -> Optional[str]:
     """Return an ISO-8601 date string, or None if unparseable."""
     if not raw:
@@ -39,7 +40,10 @@ def _parse_date(raw: str) -> Optional[str]:
                 try:
                     d = datetime.strptime(cleaned, fmt)
                 except ValueError:
-                    d = datetime.strptime(cleaned.replace(",", "").replace("  "," ").strip(), fmt.replace(", ", " "))
+                    d = datetime.strptime(
+                        cleaned.replace(",", "").replace("  ", " ").strip(),
+                        fmt.replace(", ", " "),
+                    )
                 return d.strftime("%Y-%m-%d")
             except ValueError:
                 continue
@@ -50,7 +54,7 @@ def _find_date_near_keyword(text: str, keywords: list[str]) -> Optional[str]:
     """Find a date value appearing within ~120 chars of any keyword."""
     kw_pattern = "|".join(re.escape(k) for k in keywords)
     for m in re.finditer(kw_pattern, text, re.IGNORECASE):
-        window = text[m.start(): m.start() + 120]
+        window = text[m.start() : m.start() + 120]
         for pat, fmt in _DATE_PATTERNS:
             dm = re.search(pat, window)
             if dm:
@@ -62,13 +66,12 @@ def _find_date_near_keyword(text: str, keywords: list[str]) -> Optional[str]:
 
 # ── Award range helper ─────────────────────────────────────────────────────────
 
+
 def _extract_award_range(text: str) -> dict:
     """Extract min/max award amounts from free text."""
     amounts = []
     # $1,500,000 or $1.5M or $500K
-    for m in re.finditer(
-        r"\$\s*([\d,]+(?:\.\d+)?)\s*([MKBmkb])?", text
-    ):
+    for m in re.finditer(r"\$\s*([\d,]+(?:\.\d+)?)\s*([MKBmkb])?", text):
         raw_num = float(m.group(1).replace(",", ""))
         suffix = (m.group(2) or "").upper()
         if suffix == "M":
@@ -122,6 +125,7 @@ def _safe_amount(value):
 
 # ── Main extractor class ───────────────────────────────────────────────────────
 
+
 class HTMLExtractor:
     """
     Extracts structured FOA fields from raw HTML or plain text.
@@ -149,6 +153,7 @@ class HTMLExtractor:
         text = raw_foa.raw_text or ""
         if raw_foa.raw_html and not text:
             from bs4 import BeautifulSoup
+
             soup = BeautifulSoup(raw_foa.raw_html, "html.parser")
             text = soup.get_text(separator="\n", strip=True)
 
@@ -183,23 +188,29 @@ class HTMLExtractor:
                 or opp.get("agencyCode")
                 or synopsis.get("agencyCode", "")
             )
-            result["open_date"] = _parse_date(str(
-                opp.get("openDate")
-                or opp.get("postDate")
-                or synopsis.get("postingDateStr")
-                or synopsis.get("postingDate", "")
-            ))
-            result["close_date"] = _parse_date(str(
-                opp.get("closeDate")
-                or synopsis.get("responseDateStr")
-                or synopsis.get("archiveDateStr")
-                or opp.get("archiveDate")
-                or synopsis.get("responseDate", "")
-            ))
+            result["open_date"] = _parse_date(
+                str(
+                    opp.get("openDate")
+                    or opp.get("postDate")
+                    or synopsis.get("postingDateStr")
+                    or synopsis.get("postingDate", "")
+                )
+            )
+            result["close_date"] = _parse_date(
+                str(
+                    opp.get("closeDate")
+                    or synopsis.get("responseDateStr")
+                    or synopsis.get("archiveDateStr")
+                    or opp.get("archiveDate")
+                    or synopsis.get("responseDate", "")
+                )
+            )
             result["eligibility"] = (
                 synopsis.get("applicantEligibilityDesc")
                 or opp.get("eligibilityDescription")
-                or _join_applicant_types(synopsis.get("applicantTypes") or opp.get("applicantTypes"))
+                or _join_applicant_types(
+                    synopsis.get("applicantTypes") or opp.get("applicantTypes")
+                )
                 or ""
             )
             result["description"] = (
@@ -209,10 +220,14 @@ class HTMLExtractor:
             )
 
             award_min = _safe_amount(
-                synopsis.get("awardFloor") or opp.get("awardFloor") or opp.get("awardMinimum")
+                synopsis.get("awardFloor")
+                or opp.get("awardFloor")
+                or opp.get("awardMinimum")
             )
             award_max = _safe_amount(
-                synopsis.get("awardCeiling") or opp.get("awardCeiling") or opp.get("awardMaximum")
+                synopsis.get("awardCeiling")
+                or opp.get("awardCeiling")
+                or opp.get("awardMaximum")
             )
             if award_min is not None or award_max is not None:
                 result["award_range"] = {}
@@ -257,20 +272,37 @@ class HTMLExtractor:
             "foa_id": self._find_foa_id(text, raw_foa.source_name),
             "title": self._find_title(lines, text),
             "agency": self._find_agency(text, raw_foa.source_name),
-            "open_date": _find_date_near_keyword(text, [
-                "open date", "posted", "issue date", "published", "release date"
-            ]),
-            "close_date": _find_date_near_keyword(text, [
-                "close date", "deadline", "due date", "application deadline",
-                "submission deadline", "closing date", "letter of intent"
-            ]),
-            "eligibility": self._find_section(text, [
-                "eligib", "who may apply", "applicant", "eligible organizations"
-            ]),
-            "description": self._find_section(text, [
-                "program description", "overview", "synopsis", "summary",
-                "background", "purpose", "objectives", "program goals"
-            ]),
+            "open_date": _find_date_near_keyword(
+                text, ["open date", "posted", "issue date", "published", "release date"]
+            ),
+            "close_date": _find_date_near_keyword(
+                text,
+                [
+                    "close date",
+                    "deadline",
+                    "due date",
+                    "application deadline",
+                    "submission deadline",
+                    "closing date",
+                    "letter of intent",
+                ],
+            ),
+            "eligibility": self._find_section(
+                text, ["eligib", "who may apply", "applicant", "eligible organizations"]
+            ),
+            "description": self._find_section(
+                text,
+                [
+                    "program description",
+                    "overview",
+                    "synopsis",
+                    "summary",
+                    "background",
+                    "purpose",
+                    "objectives",
+                    "program goals",
+                ],
+            ),
             "award_range": _extract_award_range(text),
             "source_url": raw_foa.source_url,
         }
@@ -345,8 +377,11 @@ class HTMLExtractor:
     def _find_section(self, text: str, keywords: list[str]) -> str:
         """Extract a paragraph that starts near any of the keywords."""
         for kw in keywords:
-            m = re.search(rf"{re.escape(kw)}\s*[:\n](.+?)(?:\n\n|\Z)", text,
-                          re.IGNORECASE | re.DOTALL)
+            m = re.search(
+                rf"{re.escape(kw)}\s*[:\n](.+?)(?:\n\n|\Z)",
+                text,
+                re.IGNORECASE | re.DOTALL,
+            )
             if m:
                 content = m.group(1).strip()
                 # Trim to ~2000 chars max

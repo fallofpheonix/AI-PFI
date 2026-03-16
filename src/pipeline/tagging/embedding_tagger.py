@@ -37,6 +37,7 @@ class EmbeddingTagger:
 
         try:
             from sentence_transformers import SentenceTransformer
+
             self._model = SentenceTransformer(model_name)
             self._label_embeddings = self._build_label_embeddings()
             logger.info(f"EmbeddingTagger loaded model: {model_name}")
