@@ -1,76 +1,39 @@
-# AI-Powered Funding Intelligence
+# AI-PFI
 
-Open-source pipeline for ingesting Funding Opportunity Announcements (FOAs), extracting structured funding metadata, and applying ontology-based semantic tags for downstream research discovery and grant matching.
+AI-PFI ingests funding opportunity pages (Grants.gov, NSF, NIH), extracts normalized FOA metadata, and tags records using a lightweight ontology.
 
-## Purpose
-
-This repository is being organized as a documentation-first engineering base for future development. The primary project knowledge now lives in the markdown files under `docs/` and in this `README.md`.
-
-## Primary Documentation
-
-- [Project Scope](docs/PROJECT_SCOPE.md)
-- [System Architecture](docs/ARCHITECTURE.md)
-- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
-- [Evaluation Plan](docs/EVALUATION.md)
-- [GSoC Proposal Draft](docs/GSOC_PROPOSAL.md)
-- [Contribution Guide](CONTRIBUTING.md)
-
-## Current Repository Scope
-
-Core pipeline capabilities in the codebase:
-- Multi-source FOA ingestion via public agency pages and APIs
-- Structured extraction and schema normalization
-- Hybrid semantic tagging:
-  - deterministic rule-based tagging
-  - embedding similarity tagging
-  - optional LLM-assisted tagging
-- JSON and CSV export
-- Basic built-in evaluation utilities
-
-## Quick Start
-
-Create a virtual environment and install dependencies:
+## Run
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+
+python main.py --url "https://www.grants.gov/web/grants/view-opportunity.html?oppId=350002" --out_dir out --no-embeddings
+python main.py --evaluate --out_dir out --no-embeddings
 ```
 
-Process a single FOA:
-
-```bash
-python main.py --url "https://www.grants.gov/web/grants/view-opportunity.html?oppId=350002" --out_dir ./out --no-embeddings
-```
-
-Run the built-in evaluation:
-
-```bash
-python main.py --evaluate --out_dir ./out --no-embeddings
-```
-
-## Repository Layout
+## Project layout
 
 ```text
-main.py
-ontology/
-pipeline/
-tests/
-docs/
-CONTRIBUTING.md
-requirements.txt
+src/
+  api/       # CLI entrypoints and argument handling
+  core/      # domain record schema + normalization rules
+  services/  # orchestration and source-facing use-cases
+  utils/     # cross-cutting helpers (logging)
+  config/    # environment-backed app settings
+  pipeline/  # legacy compatibility package (gradual migration)
+tests/       # critical-path tests only
+docs/        # architecture and planning documents
 ```
 
-## Development Status
+## Key decisions
 
-The repository contains a working baseline implementation. The next phase is to harden it into a maintainable open-source project with:
-- clearer documentation ownership
-- stronger evaluation discipline
-- cleaner reproducibility controls
-- a roadmap aligned to future HumanAI/ISSR integration
+- Keep a service layer between CLI and pipeline modules so behavior can be tested without network calls.
+- Preserve `pipeline.*` imports for compatibility while moving new work into `core/` + `services/`.
+- Prefer deterministic defaults (`--no-embeddings`) for CI and reproducibility.
 
 ## Notes
 
-- Generated outputs under `out/` are intentionally not versioned.
-- Validation logs and temporary review artifacts are intentionally not versioned.
-- Historical local documents have been migrated into canonical `docs/` files and removed from the working tree.
+- `.env.example` documents the small runtime surface we currently support.
+- `out/` and local virtualenvs are intentionally ignored.

@@ -2,7 +2,15 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.venv/
+venv/
+.env
+.env.local
 files/
 out/
 evidence/
 preserved-docs/
+
