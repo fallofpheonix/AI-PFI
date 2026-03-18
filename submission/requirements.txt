@@ -1,0 +1,29 @@
+# ── Core HTTP & parsing ───────────────────────────────────────────────────────
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# ── PDF extraction ────────────────────────────────────────────────────────────
+pdfminer.six>=20221105
+pypdf>=3.0.0
+
+# ── NLP & embeddings ─────────────────────────────────────────────────────────
+sentence-transformers>=2.2.0
+# spacy>=3.7.0          # optional: for advanced NLP pipelines
+
+# ── Vector similarity search (stretch goal) ──────────────────────────────────
+# faiss-cpu>=1.7.4       # uncomment to enable FAISS similarity search
+# chromadb>=0.4.0        # uncomment to enable Chroma vector store
+
+# ── LLM integration (stretch goal) ───────────────────────────────────────────
+# anthropic>=0.20.0      # uncomment if using Claude for LLM tagging
+# openai>=1.0.0          # uncomment if using OpenAI for LLM tagging
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dateutil>=2.8.2
+tqdm>=4.66.0
+
+# ── Dev / testing ─────────────────────────────────────────────────────────────
+pytest>=7.4.0
+pytest-cov>=4.1.0
+ruff>=0.6.0
