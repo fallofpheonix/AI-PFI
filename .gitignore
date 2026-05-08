@@ -14,3 +14,54 @@ out/
 evidence/
 preserved-docs/
 
+# OS/editor
+.idea/
+.vscode/
+# Python
+*.py[cod]
+*.pyo
+*.egg-info/
+htmlcov/
+# Node/JS
+node_modules/
+dist/
+build/
+coverage/
+.env.*
+!.env.example
+# Dart/Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+# Local data, models, and generated artifacts
+*.db
+*.db.bak
+*.sqlite
+*.sqlite3
+*.log
+*.jsonl
+*.csv.tmp
+out_old/
+output/
+outputs/
+artifacts/runs/
+artifacts/checkpoints/
+models/**/*.pt
+models/**/*.pth
+models/**/*.bin
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.mp3
+*.wav
+*.m4a
+# Native build products
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+bench/bench_*
+tests/test_*
