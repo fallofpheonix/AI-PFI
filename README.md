@@ -37,3 +37,14 @@ docs/        # architecture and planning documents
 
 - `.env.example` documents the small runtime surface we currently support.
 - `out/` and local virtualenvs are intentionally ignored.
+
+
+## Local Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+# Install dependencies
+if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
+if [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then pip install -e .; fi
+```

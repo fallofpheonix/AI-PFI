@@ -1,19 +1,11 @@
-"""
-Storage / Export module.
-
-Handles:
-  - Single-record JSON / CSV export (for the screening task)
-  - Batch export of multiple FOA records
-  - Update workflow for incremental ingestion
-"""
-
 import csv
 import json
 import logging
+import sqlite3
 from pathlib import Path
-from typing import List, Union
+from typing import List, Dict, Union, Optional
 
-from ..extraction.normalizer import FOARecord
+from core.models.foa_record import FOARecord
 
 logger = logging.getLogger(__name__)
 
@@ -97,59 +89,114 @@ def export_batch_csv(
     return out_path
 
 
-# ── Update workflow ────────────────────────────────────────────────────────────
+# ── SQLite Database Storage ───────────────────────────────────────────────────
 
 
 class FOAStore:
     """
-    Persistent FOA store backed by a JSON-lines file.
-    Supports incremental updates: skips already-ingested FOA IDs.
+    Thread-resilient transactional FOA storage engine backed by SQLite.
+    Replaces the resource-intensive JSONL whole-file rewrite engine.
     """
 
-    def __init__(self, store_path: Union[str, Path]):
-        self.store_path = Path(store_path)
-        self._records: dict = {}
-        if self.store_path.exists():
-            self._load()
+    def __init__(self, database_path: Union[str, Path]):
+        self.db_path = Path(database_path)
+        self._init_db()
 
-    def _load(self):
-        with open(self.store_path, "r", encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if line:
-                    rec = json.loads(line)
-                    self._records[rec["foa_id"]] = rec
+    def _get_connection(self) -> sqlite3.Connection:
+        """
+        Generates database connections with optimized timeout tracking.
+        """
+        conn = sqlite3.connect(str(self.db_path), timeout=30.0)
+        # Row factory yields dictionary access structures effortlessly
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def _init_db(self):
+        """
+        Initializes the relational schema and activates Write-Ahead Logging (WAL).
+        """
+        with self._get_connection() as conn:
+            # Optimize transaction concurrency using WAL mode journaling
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+            
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS foa_records (
+                    foa_id TEXT PRIMARY KEY,
+                    source_name TEXT NOT NULL,
+                    title TEXT,
+                    raw_payload TEXT NOT NULL, -- Stored as validated JSON string
+                    extracted_at TEXT NOT NULL
+                );
+            """)
+            conn.commit()
 
     def contains(self, foa_id: str) -> bool:
-        return foa_id in self._records
+        """Determines if a given record uniquely exists in the dataset boundary."""
+        with self._get_connection() as conn:
+            cursor = conn.execute("SELECT 1 FROM foa_records WHERE foa_id = ? LIMIT 1;", (foa_id,))
+            return cursor.fetchone() is not None
 
     def upsert(self, record: FOARecord) -> bool:
         """
-        Insert or update by foa_id.
-        Returns True only when store contents changed.
+        Executes an atomic insert/update. Returns True if data is committed.
         """
-        next_record = record.to_dict()
-        prev_record = self._records.get(record.foa_id)
-        if prev_record == next_record:
-            return False
+        record_dict = record.to_dict()
+        raw_payload = json.dumps(record_dict, ensure_ascii=False)
 
-        self._records[record.foa_id] = next_record
-        self._flush_snapshot()
-        return True
+        with self._get_connection() as conn:
+            # Pre-flight state comparison
+            cursor = conn.execute(
+                "SELECT raw_payload FROM foa_records WHERE foa_id = ?;", 
+                (record.foa_id,)
+            )
+            existing = cursor.fetchone()
+            
+            if existing:
+                if existing["raw_payload"] == raw_payload:
+                    return False  # State unchanged
+                
+                # Update existing
+                conn.execute("""
+                    UPDATE foa_records 
+                    SET source_name = ?, title = ?, raw_payload = ?, extracted_at = ?
+                    WHERE foa_id = ?;
+                """, (
+                    record_dict.get("source_name"),
+                    record_dict.get("title"),
+                    raw_payload,
+                    record_dict.get("ingested_at"),
+                    record.foa_id
+                ))
+            else:
+                # Insert new
+                conn.execute("""
+                    INSERT INTO foa_records (
+                        foa_id, source_name, title, raw_payload, extracted_at
+                    ) VALUES (?, ?, ?, ?, ?);
+                """, (
+                    record.foa_id,
+                    record_dict.get("source_name"),
+                    record_dict.get("title"),
+                    raw_payload,
+                    record_dict.get("ingested_at")
+                ))
+            conn.commit()
+            return True
 
-    def _flush_snapshot(self):
-        """Rewrite full JSONL snapshot to avoid duplicate records."""
-        self.store_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.store_path, "w", encoding="utf-8") as fh:
-            for foa_id in sorted(self._records.keys()):
-                fh.write(json.dumps(self._records[foa_id], ensure_ascii=False) + "\n")
-
-    def all_records(self) -> List[dict]:
-        return list(self._records.values())
+    def all_records(self) -> List[FOARecord]:
+        """Collects all stored assets rehydrated into FOARecord objects."""
+        with self._get_connection() as conn:
+            cursor = conn.execute("SELECT raw_payload FROM foa_records;")
+            records = []
+            for row in cursor.fetchall():
+                data = json.loads(row["raw_payload"])
+                records.append(_dict_to_record(data))
+            return records
 
     def export_snapshot(self, out_dir: Union[str, Path]):
         """Export current store as foa_batch.json + foa_batch.csv."""
-        records = [_dict_to_record(r) for r in self.all_records()]
+        records = self.all_records()
         export_batch_json(records, out_dir)
         export_batch_csv(records, out_dir)
 
@@ -160,3 +207,4 @@ def _dict_to_record(d: dict) -> FOARecord:
         if hasattr(r, k):
             setattr(r, k, v)
     return r
+
