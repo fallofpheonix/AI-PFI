@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import time
 from core.normalization import FOANormalizer
 from services.evaluation_service import FOAEvaluationService
 from services.export_service import FOAExportService
 from services.extraction_service import FOAExtractionService
 from services.ingestion_service import FOAIngestionService
 from services.tagging_service import FOATaggingService
+from utils.telemetry import EXTRACTION_LATENCY, INGESTION_ERRORS
 
 
 class FOAPipelineService:
@@ -28,10 +30,23 @@ class FOAPipelineService:
         self.exporter = FOAExportService(store_path=store_path)
         self.evaluation = FOAEvaluationService(self.tagging.tagger)
 
-    def process_url(self, source_url: str):
-        raw_foa = self.ingestion.fetch_raw_foa(source_url)
-        extracted = self.extraction.extract_fields(raw_foa)
-        record = self.normalizer.normalize(extracted, raw_foa=raw_foa)
-        record.tags = self.tagging.tag_record(record)
-        self.exporter.maybe_upsert(record)
-        return record
+    async def process_url(self, source_url: str):
+        # Determine type for labeling
+        ext_type = "pdf" if source_url.lower().endswith(".pdf") else "html"
+        
+        start_time = time.time()
+        try:
+            raw_foa = self.ingestion.fetch_raw_foa(source_url)
+            extracted = await self.extraction.extract_fields(raw_foa)
+            
+            # Record successful extraction latency
+            EXTRACTION_LATENCY.labels(ext_type).observe(time.time() - start_time)
+            
+            record = self.normalizer.normalize(extracted, raw_foa=raw_foa)
+            record.tags = self.tagging.tag_record(record)
+            self.exporter.maybe_upsert(record)
+            return record
+            
+        except Exception as e:
+            INGESTION_ERRORS.labels(ext_type).inc()
+            raise e
