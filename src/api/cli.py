@@ -34,6 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
     # Serve command
     subparsers.add_parser("serve", help="Start the FastAPI server")
     
+    # Dashboard command
+    subparsers.add_parser("dashboard", help="Start the Streamlit dashboard")
+    
     # Global args
     parser.add_argument("--verbose", "-v", action="store_true")
     
@@ -141,6 +144,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "serve":
         from .server import start_server
         start_server()
+        return 0
+
+    if args.command == "dashboard":
+        import subprocess
+        dashboard_path = Path(__file__).resolve().parent.parent / "frontend" / "app.py"
+        subprocess.run(["streamlit", "run", str(dashboard_path)])
         return 0
 
     service = FOAPipelineService(

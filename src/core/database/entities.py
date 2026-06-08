@@ -47,3 +47,13 @@ class FOAEntity(SQLModel, table=True):
     @tags.setter
     def tags(self, value: List[str]):
         self.tags_json = json.dumps(value)
+
+
+class ResearcherEntity(SQLModel, table=True):
+    __tablename__ = "researcher_profiles"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    email: str
+    query: str
+    match_threshold: float = 0.35

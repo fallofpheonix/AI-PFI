@@ -75,3 +75,14 @@ class FOARecord(RawFOA):
             "schema_version",
             "tags_list",
         ]
+
+
+class ResearcherCreate(BaseModel):
+    name: str
+    email: str
+    query: str
+    match_threshold: float = 0.35
+
+
+class ResearcherProfile(ResearcherCreate):
+    id: int

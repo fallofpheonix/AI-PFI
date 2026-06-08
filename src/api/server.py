@@ -13,7 +13,8 @@ from pydantic import BaseModel
 
 from config import settings
 from services import FOAPipelineService
-from core.models import FOARecord
+from services.matching_service import MatchingService
+from core.models import FOARecord, ResearcherCreate, ResearcherProfile
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ app = FastAPI(
 # Shared service instances
 # In a production app, these would be managed via dependency injection
 service = FOAPipelineService()
+matching_service = MatchingService(foa_store=service.exporter._store)
 
 
 class IngestRequest(BaseModel):
@@ -83,8 +85,6 @@ async def get_foa(foa_id: str):
     """Retrieve a specific FOA by its identifier."""
     # We add a helper to FOAStore for single retrieval
     with service.exporter._store as store:
-        # Note: FOAStore currently doesn't have a direct get(id) but all_records can be used
-        # or we can add it. For now, let's assume we find it in all_records or add a quick helper.
         from sqlmodel import Session, select
         from core.database.entities import FOAEntity
         from core.database.session import engine
@@ -94,6 +94,43 @@ async def get_foa(foa_id: str):
             if not entity:
                 raise HTTPException(status_code=404, detail=f"FOA {foa_id} not found")
             return service.exporter._store._entity_to_record(entity)
+
+
+@app.post("/api/v1/profiles", response_model=ResearcherProfile)
+async def create_profile(request: ResearcherCreate):
+    """Register a new researcher profile."""
+    try:
+        return matching_service.researcher_store.create(request)
+    except Exception as e:
+        logger.error(f"Failed to create profile: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create profile")
+
+
+@app.get("/api/v1/profiles", response_model=List[ResearcherProfile])
+async def list_profiles():
+    """List all registered researcher profiles."""
+    return matching_service.researcher_store.get_all()
+
+
+@app.get("/api/v1/profiles/{profile_id}/matches", response_model=List[FOARecord])
+async def get_profile_matches(profile_id: int, limit: int = Query(5, ge=1, le=20)):
+    """Get matched funding opportunities for a specific profile."""
+    profile = matching_service.researcher_store.get(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+        
+    return matching_service.get_matches_for_profile(profile, limit=limit)
+
+
+@app.post("/api/v1/profiles/{profile_id}/alert")
+async def trigger_profile_alert(profile_id: int):
+    """Trigger a mock email alert for a profile."""
+    profile = matching_service.researcher_store.get(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+        
+    digest = matching_service.generate_digest(profile)
+    return {"status": "alert_sent", "message": f"Sent mock alert to {profile.email}"}
 
 
 def _process_batch_background(urls: List[str]):
