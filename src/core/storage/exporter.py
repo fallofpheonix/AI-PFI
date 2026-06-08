@@ -18,6 +18,7 @@ from sqlmodel import Session, select
 from core.models import FOARecord, AgencyEnum
 from core.database.entities import FOAEntity
 from core.database.session import engine, init_db
+from core.database.vector_store import VectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,7 @@ def export_batch_csv(
 
 class FOAStore:
     """
-    Persistent FOA store backed by SQLite (via SQLModel).
+    Persistent FOA store backed by SQLite (via SQLModel) and ChromaDB.
     Supports incremental updates: skips already-ingested FOA IDs.
     """
 
@@ -116,6 +117,7 @@ class FOAStore:
         # store_path is ignored now as we use DEFAULT_DB_PATH from session.py
         # but kept for signature compatibility
         init_db()
+        self.vector_store = VectorStore()
 
     def contains(self, foa_id: str) -> bool:
         with Session(engine) as session:
@@ -124,7 +126,7 @@ class FOAStore:
 
     def upsert(self, record: FOARecord) -> bool:
         """
-        Insert or update by foa_id.
+        Insert or update by foa_id in both SQLite and ChromaDB.
         Returns True when record was updated or inserted.
         """
         with Session(engine) as session:
@@ -140,11 +142,36 @@ class FOAStore:
                 session.add(entity)
             
             session.commit()
+            
+            # Sync to Vector Store
+            try:
+                self.vector_store.upsert(record)
+            except Exception as e:
+                logger.error(f"Failed to index {record.foa_id} in vector store: {e}")
+                
             return True
 
-    def all_records(self) -> List[FOARecord]:
+    def search_semantic(self, query: str, limit: int = 10) -> List[FOARecord]:
+        """Perform semantic search and return full records."""
+        matches = self.vector_store.search(query, limit=limit)
+        if not matches:
+            return []
+            
+        foa_ids = [m[0] for m in matches]
+        
+        # Hydrate from SQLite
         with Session(engine) as session:
-            statement = select(FOAEntity)
+            # We want to preserve the order returned by ChromaDB
+            records = []
+            for foa_id in foa_ids:
+                entity = session.get(FOAEntity, foa_id)
+                if entity:
+                    records.append(self._entity_to_record(entity))
+            return records
+
+    def all_records(self, limit: int = 100, offset: int = 0) -> List[FOARecord]:
+        with Session(engine) as session:
+            statement = select(FOAEntity).offset(offset).limit(limit)
             entities = session.exec(statement).all()
             return [self._entity_to_record(e) for e in entities]
 

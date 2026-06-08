@@ -11,6 +11,13 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     
+    # Storage
+    CHROMA_DB_PATH: str = "./chroma_db"
+    
+    # Server
+    SERVER_HOST: str = "0.0.0.0"
+    SERVER_PORT: int = 8001
+    
     # For sentence-transformers/huggingface
     HF_HOME: Optional[str] = None
 

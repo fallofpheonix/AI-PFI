@@ -18,15 +18,25 @@ logger = logging.getLogger(__name__)
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="FOA Intelligence Pipeline")
-    parser.add_argument("--url", type=str, help="Single FOA URL")
-    parser.add_argument("--batch", type=str, help="Text file with one URL per line")
-    parser.add_argument("--out_dir", type=str, default="./out")
-    parser.add_argument("--no-embeddings", action="store_true")
-    parser.add_argument("--llm", action="store_true")
-    parser.add_argument("--evaluate", action="store_true")
+    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+    
+    # Process/Ingest command (default behavior)
+    process_parser = subparsers.add_parser("process", help="Ingest FOAs from URLs")
+    process_parser.add_argument("--url", type=str, help="Single FOA URL")
+    process_parser.add_argument("--batch", type=str, help="Text file with one URL per line")
+    process_parser.add_argument("--out_dir", type=str, default="./out")
+    process_parser.add_argument("--no-embeddings", action="store_true")
+    process_parser.add_argument("--llm", action="store_true")
+    process_parser.add_argument("--evaluate", action="store_true")
+    process_parser.add_argument("--store", type=str, help="JSONL store path")
+    process_parser.add_argument("--ontology", type=str, help="Custom ontology path")
+    
+    # Serve command
+    subparsers.add_parser("serve", help="Start the FastAPI server")
+    
+    # Global args
     parser.add_argument("--verbose", "-v", action="store_true")
-    parser.add_argument("--store", type=str, help="JSONL store path")
-    parser.add_argument("--ontology", type=str, help="Custom ontology path")
+    
     return parser
 
 
@@ -110,9 +120,16 @@ def _run_eval(service: FOAPipelineService, out_dir: str) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
+    
+    # For compatibility, if no command is given but args are, 
+    # we default to "process" if --url or --batch or --evaluate is present.
+    if argv and not any(arg in {"process", "serve"} for arg in argv):
+        if any(arg in {"--url", "--batch", "--evaluate"} for arg in argv):
+            argv.insert(0, "process")
+
     args = parser.parse_args(argv)
 
-    if not args.url and not args.batch and not args.evaluate:
+    if not args.command:
         parser.print_help()
         return 0
 
@@ -120,6 +137,11 @@ def main(argv: list[str] | None = None) -> int:
     import os
     if settings.HF_HOME:
         os.environ["HF_HOME"] = settings.HF_HOME
+
+    if args.command == "serve":
+        from .server import start_server
+        start_server()
+        return 0
 
     service = FOAPipelineService(
         use_embeddings=not args.no_embeddings,

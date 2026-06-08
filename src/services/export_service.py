@@ -13,11 +13,9 @@ from core.storage.exporter import (
 
 class FOAExportService:
     def __init__(self, store_path: str | None = None):
-        self._store = FOAStore(store_path) if store_path else None
+        self._store = FOAStore(store_path)
 
     def maybe_upsert(self, record) -> bool:
-        if not self._store:
-            return False
         return self._store.upsert(record)
 
     def export_single(self, record, out_dir: str):
