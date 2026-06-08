@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "opportunity_number": "RFA-AI-24-001",
+      "project_title": "Artificial Intelligence NIH Grant (API)",
+      "agency_ic_admin": { "name": "National Institutes of Health (API)" },
+      "project_start_date": "2024-06-07",
+      "project_end_date": "2027-06-07",
+      "abstract_text": "Research on neurodegenerative diseases (API)."
+    }
+  ]
+}

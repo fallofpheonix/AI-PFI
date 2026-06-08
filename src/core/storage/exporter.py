@@ -4,7 +4,7 @@ Storage / Export module.
 Handles:
   - Single-record JSON / CSV export (for the screening task)
   - Batch export of multiple FOA records
-  - Update workflow for incremental ingestion
+  - SQLite database persistence using SQLModel
 """
 
 import csv
@@ -13,7 +13,11 @@ import logging
 from pathlib import Path
 from typing import List, Union
 
-from core.models import FOARecord
+from sqlmodel import Session, select
+
+from core.models import FOARecord, AgencyEnum
+from core.database.entities import FOAEntity
+from core.database.session import engine, init_db
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +33,6 @@ def export_json(
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / filename
     with open(out_path, "w", encoding="utf-8") as fh:
-        # Use model_dump_json or model_dump for serializable output
         json.dump(record.to_dict(), fh, indent=2, ensure_ascii=False, default=str)
     logger.info(f"JSON exported → {out_path}")
     return out_path
@@ -100,62 +103,90 @@ def export_batch_csv(
     return out_path
 
 
-# ── Update workflow ────────────────────────────────────────────────────────────
+# ── Database Store ────────────────────────────────────────────────────────────
 
 
 class FOAStore:
     """
-    Persistent FOA store backed by a JSON-lines file.
+    Persistent FOA store backed by SQLite (via SQLModel).
     Supports incremental updates: skips already-ingested FOA IDs.
     """
 
-    def __init__(self, store_path: Union[str, Path]):
-        self.store_path = Path(store_path)
-        self._records: dict = {}
-        if self.store_path.exists():
-            self._load()
-
-    def _load(self):
-        with open(self.store_path, "r", encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if line:
-                    rec = json.loads(line)
-                    self._records[rec["foa_id"]] = rec
+    def __init__(self, store_path: Union[str, Path] = None):
+        # store_path is ignored now as we use DEFAULT_DB_PATH from session.py
+        # but kept for signature compatibility
+        init_db()
 
     def contains(self, foa_id: str) -> bool:
-        return foa_id in self._records
+        with Session(engine) as session:
+            statement = select(FOAEntity).where(FOAEntity.foa_id == foa_id)
+            return session.exec(statement).first() is not None
 
     def upsert(self, record: FOARecord) -> bool:
         """
         Insert or update by foa_id.
-        Returns True only when store contents changed.
+        Returns True when record was updated or inserted.
         """
-        next_record = record.to_dict()
-        # Ensure dict is serializable for comparison if needed, or just compare dicts
-        prev_record = self._records.get(record.foa_id)
-        if prev_record == next_record:
-            return False
+        with Session(engine) as session:
+            existing = session.get(FOAEntity, record.foa_id)
+            entity = self._record_to_entity(record)
+            
+            if existing:
+                # Update existing fields
+                for key, value in entity.model_dump(exclude={"foa_id"}).items():
+                    setattr(existing, key, value)
+                session.add(existing)
+            else:
+                session.add(entity)
+            
+            session.commit()
+            return True
 
-        self._records[record.foa_id] = next_record
-        self._flush_snapshot()
-        return True
-
-    def _flush_snapshot(self):
-        """Rewrite full JSONL snapshot to avoid duplicate records."""
-        self.store_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.store_path, "w", encoding="utf-8") as fh:
-            for foa_id in sorted(self._records.keys()):
-                fh.write(
-                    json.dumps(self._records[foa_id], ensure_ascii=False, default=str)
-                    + "\n"
-                )
-
-    def all_records(self) -> List[dict]:
-        return list(self._records.values())
+    def all_records(self) -> List[FOARecord]:
+        with Session(engine) as session:
+            statement = select(FOAEntity)
+            entities = session.exec(statement).all()
+            return [self._entity_to_record(e) for e in entities]
 
     def export_snapshot(self, out_dir: Union[str, Path]):
         """Export current store as foa_batch.json + foa_batch.csv."""
-        records = [FOARecord(**r) for r in self.all_records()]
+        records = self.all_records()
         export_batch_json(records, out_dir)
         export_batch_csv(records, out_dir)
+
+    def _record_to_entity(self, record: FOARecord) -> FOAEntity:
+        entity = FOAEntity(
+            foa_id=record.foa_id,
+            title=record.title,
+            agency=record.agency,
+            url=record.url,
+            source=record.source.value,
+            deadline=record.deadline,
+            open_date=record.open_date,
+            close_date=record.close_date,
+            eligibility=record.eligibility,
+            description=record.description,
+            ingested_at=record.ingested_at,
+            schema_version=record.schema_version,
+        )
+        entity.award_range = record.award_range
+        entity.tags = record.tags
+        return entity
+
+    def _entity_to_record(self, entity: FOAEntity) -> FOARecord:
+        return FOARecord(
+            foa_id=entity.foa_id,
+            title=entity.title,
+            agency=entity.agency,
+            url=entity.url,
+            source=AgencyEnum(entity.source),
+            deadline=entity.deadline,
+            open_date=entity.open_date,
+            close_date=entity.close_date,
+            eligibility=entity.eligibility,
+            description=entity.description,
+            award_range=entity.award_range,
+            tags=entity.tags,
+            ingested_at=entity.ingested_at,
+            schema_version=entity.schema_version,
+        )

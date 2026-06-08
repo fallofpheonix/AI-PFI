@@ -1,0 +1,14 @@
+{
+  "response": {
+    "award": [
+      {
+        "id": "23-615",
+        "title": "Advanced Distributed Systems (API)",
+        "startDate": "2024-01-01",
+        "expDate": "2024-10-15",
+        "abstractText": "NSF seeks proposals for next-generation computing infrastructure (API).",
+        "fundsObligatedAmt": "1000000"
+      }
+    ]
+  }
+}
