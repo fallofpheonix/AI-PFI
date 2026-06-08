@@ -35,6 +35,7 @@ coverage/
 .flutter-plugins-dependencies
 .packages
 # Local data, models, and generated artifacts
+chroma_db/
 *.db
 *.db.bak
 *.sqlite
