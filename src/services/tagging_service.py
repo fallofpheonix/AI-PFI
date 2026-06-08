@@ -1,6 +1,6 @@
-from __future__ import annotations
-
-from pipeline.tagging import HybridTagger
+from typing import List
+from core.models import FOARecord
+from services.tagging.tagger import HybridTagger
 
 
 class FOATaggingService:
@@ -21,5 +21,14 @@ class FOATaggingService:
     def tagger(self) -> HybridTagger:
         return self._tagger
 
-    def tag_record(self, record) -> dict:
-        return self._tagger.tag(record)
+    def tag_record(self, record: FOARecord) -> List[str]:
+        tag_dict = self._tagger.tag(record)
+        # Flatten dictionary of lists into a single list of unique tags
+        flattened = set()
+        for tags in tag_dict.values():
+            if isinstance(tags, list):
+                flattened.update(tags)
+            else:
+                flattened.add(str(tags))
+        record.tags = sorted(list(flattened))
+        return record.tags

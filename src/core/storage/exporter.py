@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from typing import List, Union
 
-from ..extraction.normalizer import FOARecord
+from core.models import FOARecord
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,8 @@ def export_json(
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / filename
     with open(out_path, "w", encoding="utf-8") as fh:
-        json.dump(record.to_dict(), fh, indent=2, ensure_ascii=False)
+        # Use model_dump_json or model_dump for serializable output
+        json.dump(record.to_dict(), fh, indent=2, ensure_ascii=False, default=str)
     logger.info(f"JSON exported → {out_path}")
     return out_path
 
@@ -43,7 +44,7 @@ def export_csv(
     out_path = out_dir / filename
     row = record.to_csv_row()
     fieldnames = FOARecord.csv_fieldnames()
-    # Add any extra tag columns discovered at runtime
+    # Add any extra fields discovered at runtime
     for k in row:
         if k not in fieldnames:
             fieldnames.append(k)
@@ -67,7 +68,9 @@ def export_batch_json(
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / filename
     with open(out_path, "w", encoding="utf-8") as fh:
-        json.dump([r.to_dict() for r in records], fh, indent=2, ensure_ascii=False)
+        json.dump(
+            [r.to_dict() for r in records], fh, indent=2, ensure_ascii=False, default=str
+        )
     logger.info(f"Batch JSON exported ({len(records)} records) → {out_path}")
     return out_path
 
@@ -129,6 +132,7 @@ class FOAStore:
         Returns True only when store contents changed.
         """
         next_record = record.to_dict()
+        # Ensure dict is serializable for comparison if needed, or just compare dicts
         prev_record = self._records.get(record.foa_id)
         if prev_record == next_record:
             return False
@@ -142,21 +146,16 @@ class FOAStore:
         self.store_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.store_path, "w", encoding="utf-8") as fh:
             for foa_id in sorted(self._records.keys()):
-                fh.write(json.dumps(self._records[foa_id], ensure_ascii=False) + "\n")
+                fh.write(
+                    json.dumps(self._records[foa_id], ensure_ascii=False, default=str)
+                    + "\n"
+                )
 
     def all_records(self) -> List[dict]:
         return list(self._records.values())
 
     def export_snapshot(self, out_dir: Union[str, Path]):
         """Export current store as foa_batch.json + foa_batch.csv."""
-        records = [_dict_to_record(r) for r in self.all_records()]
+        records = [FOARecord(**r) for r in self.all_records()]
         export_batch_json(records, out_dir)
         export_batch_csv(records, out_dir)
-
-
-def _dict_to_record(d: dict) -> FOARecord:
-    r = FOARecord()
-    for k, v in d.items():
-        if hasattr(r, k):
-            setattr(r, k, v)
-    return r

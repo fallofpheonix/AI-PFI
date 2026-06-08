@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from core.normalization import FOANormalizer
-from pipeline.ingestion.base import RawFOA
+from services.providers.base import RawFOA
 from services.foa_pipeline_service import FOAPipelineService
 
 
@@ -17,8 +17,8 @@ def test_normalizer_generates_fallback_id_for_empty_input():
 def test_pipeline_service_processes_single_url(monkeypatch):
     service = FOAPipelineService(use_embeddings=False)
 
-    fake_raw = RawFOA(source_url="https://example.test", source_name="nih", raw_text="test")
-    monkeypatch.setattr(service.ingestion, "fetch_raw_foa", lambda _: fake_raw)
+    fake_raw = RawFOA(url="https://example.test", agency="nih", raw_text="test")
+    monkeypatch.setattr(service.ingestion, "fetch_raw_foa", lambda u: fake_raw)
     monkeypatch.setattr(
         service.extraction,
         "extract_fields",

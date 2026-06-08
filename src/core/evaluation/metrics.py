@@ -143,20 +143,20 @@ class EvaluationReport:
         }
 
     def print_summary(self):
-        print("\n" + "=" * 60)
-        print("  FOA TAGGING EVALUATION REPORT")
-        print("=" * 60)
-        print(f"  Examples evaluated : {self.n_examples}")
-        print(f"  Macro Precision    : {self.macro_precision:.4f}")
-        print(f"  Macro Recall       : {self.macro_recall:.4f}")
-        print(f"  Macro F1           : {self.macro_f1:.4f}")
-        print("-" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("  FOA TAGGING EVALUATION REPORT")
+        logger.info("=" * 60)
+        logger.info(f"  Examples evaluated : {self.n_examples}")
+        logger.info(f"  Macro Precision    : {self.macro_precision:.4f}")
+        logger.info(f"  Macro Recall       : {self.macro_recall:.4f}")
+        logger.info(f"  Macro F1           : {self.macro_f1:.4f}")
+        logger.info("-" * 60)
         for cat, m in self.per_category.items():
-            print(
+            logger.info(
                 f"  {cat:<25}  P={m.precision:.3f}  R={m.recall:.3f}  "
                 f"F1={m.f1:.3f}  (support={m.support})"
             )
-        print("=" * 60 + "\n")
+        logger.info("=" * 60 + "\n")
 
 
 # ── Evaluation runner ─────────────────────────────────────────────────────────

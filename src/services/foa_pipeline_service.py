@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from core.models import FOARecord
 from core.normalization import FOANormalizer
 from services.evaluation_service import FOAEvaluationService
 from services.export_service import FOAExportService
@@ -28,7 +29,7 @@ class FOAPipelineService:
         self.exporter = FOAExportService(store_path=store_path)
         self.evaluation = FOAEvaluationService(self.tagging.tagger)
 
-    def process_url(self, source_url: str):
+    def process_url(self, source_url: str) -> FOARecord:
         raw_foa = self.ingestion.fetch_raw_foa(source_url)
         extracted = self.extraction.extract_fields(raw_foa)
         record = self.normalizer.normalize(extracted, raw_foa=raw_foa)

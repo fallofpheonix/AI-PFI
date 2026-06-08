@@ -5,31 +5,38 @@ import re
 import uuid
 from datetime import datetime, timezone
 
-from core.models import FOARecord
+from core.models import FOARecord, AgencyEnum, RawFOA
 
 logger = logging.getLogger(__name__)
 
 
 class FOANormalizer:
-    def normalize(self, extracted: dict, raw_foa=None) -> FOARecord:
-        record = FOARecord()
-
-        record.foa_id = self._normalize_identifier(extracted.get("foa_id", ""))
-        record.title = self._normalize_text(extracted.get("title", ""), max_len=300)
-        record.agency = self._normalize_text(extracted.get("agency", ""), max_len=200)
-        record.open_date = self._normalize_iso_date(extracted.get("open_date", ""))
-        record.close_date = self._normalize_iso_date(extracted.get("close_date", ""))
-        record.eligibility = self._normalize_text(extracted.get("eligibility", ""), max_len=3000)
-        record.description = self._normalize_text(extracted.get("description", ""), max_len=5000)
-        record.award_range = self._normalize_award_range(extracted.get("award_range", {}))
-        record.source_url = extracted.get("source_url", "")
-        record.ingested_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
+    def normalize(self, extracted: dict, raw_foa: RawFOA = None) -> FOARecord:
+        # Map source name to AgencyEnum
+        source = AgencyEnum.GRANTS_GOV
         if raw_foa:
-            record.source_name = getattr(raw_foa, "source_name", "")
+            name = (raw_foa.agency or "").lower()
+            if "nih" in name:
+                source = AgencyEnum.NIH
+            elif "nsf" in name:
+                source = AgencyEnum.NSF
+
+        record = FOARecord(
+            url=raw_foa.url if raw_foa else extracted.get("source_url", ""),
+            source=source,
+            foa_id=self._normalize_identifier(extracted.get("foa_id", "")),
+            title=self._normalize_text(extracted.get("title", ""), max_len=300),
+            agency=self._normalize_text(extracted.get("agency", ""), max_len=200),
+            open_date=self._normalize_iso_date(extracted.get("open_date", "")),
+            close_date=self._normalize_iso_date(extracted.get("close_date", "")),
+            eligibility=self._normalize_text(extracted.get("eligibility", ""), max_len=3000),
+            description=self._normalize_text(extracted.get("description", ""), max_len=5000),
+            award_range=self._normalize_award_range(extracted.get("award_range", {})),
+            ingested_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        )
 
         if not record.foa_id:
-            seed = record.source_url or record.title or "untitled"
+            seed = record.url or record.title or "untitled"
             record.foa_id = f"FOA-{str(uuid.uuid5(uuid.NAMESPACE_URL, seed))[:8].upper()}"
             logger.debug("Generated fallback FOA identifier: %s", record.foa_id)
 

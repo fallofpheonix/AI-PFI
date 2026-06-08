@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pipeline.evaluation import run_evaluation
+from core.evaluation.metrics import run_evaluation
 
 
 class FOAEvaluationService:
